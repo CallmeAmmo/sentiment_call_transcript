@@ -1,39 +1,80 @@
-
+import re
 from openai import OpenAI
 from models import free_models
 from api_key import OPENROUTER_API_KEY
 import json, os, glob, time
-# import glob
 from tqdm import tqdm
-# import time
+import shutil
 
 # Initialize model and API key
 MODEL = free_models[0]
-OPENROUTER_API_KEY = OPENROUTER_API_KEY[1]
+OPENROUTER_API_KEY = OPENROUTER_API_KEY[0]
 
 
-def call_openai_api(client, model, system_message, user_message, retry_delay=3, max_retries=3):
+def create_final_files(file_name):
+    # Define paths for final files
+    pos_final_path = f"sentiment_files/positive/positive_phrases_{file_name}.txt"
+    neg_final_path = f"sentiment_files/negative/negative_phrases_{file_name}.txt"
+    analysis_output_path = f"sentiment_files/analysis_output/analysis_output_{file_name}.txt"
+
+    # Ensure the directories exist
+    os.makedirs(os.path.dirname(pos_final_path), exist_ok=True)
+    os.makedirs(os.path.dirname(neg_final_path), exist_ok=True)
+    os.makedirs(os.path.dirname(analysis_output_path), exist_ok=True)
+
+
+    # Copy data from temporary files to final files
+    try:
+        # Copy positive phrases
+        shutil.copy(f"current_file/positive_phrases_{file_name}_tmp.txt", pos_final_path)
+        print(f"Final positive phrases file created: {pos_final_path}")
+
+        # Copy negative phrases
+        shutil.copy(f"current_file/negative_phrases_{file_name}_tmp.txt", neg_final_path)
+        print(f"Final negative phrases file created: {neg_final_path}")
+
+        # Copy analysis_output phrases
+        shutil.copy(f"current_file/analysis_output_{file_name}_tmp.txt", analysis_output_path)
+        print(f"Final analysis output file created: {analysis_output_path}")
+
+        # Delete temporary files
+        os.remove(f"current_file/positive_phrases_{file_name}_tmp.txt")
+        os.remove(f"current_file/negative_phrases_{file_name}_tmp.txt")
+        os.remove(f"current_file/analysis_output_{file_name}_tmp.txt")
+        print("Temporary files deleted.")
+
+    except Exception as e:
+        print(f"An error occurred while creating final files or deleting temporary files: {e}")
+
+def call_openai_api(client, model, system_message, user_message, retry_delay=4, max_retries=3):
     """Call the OpenAI API with retry logic for rate-limit errors."""
     retries = 0
     while retries < max_retries:
-        try:
-            # Call the OpenAI API
-            completion = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": user_message},
-                ],
-            )
+
+        # Call the OpenAI API
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message},
+            ],
+        )
+
+        
+        if completion.id == None :
+
+            try :
+                raw_metadata = json.loads(completion.error['metadata']['raw'])
+                if 'error' in raw_metadata and raw_metadata['error'].get('type') == 'rate_limit_exceeded':
+                    retries += 1
+                    print(f"Rate limit exceeded. Retrying in {retry_delay} seconds... (Retry {retries}/{max_retries})")
+                    time.sleep(retry_delay)
+            except:
+                print(completion)
+        else:
             return completion
-        except Exception as e:
-            if "Rate limit exceeded" in str(e):
-                retries += 1
-                print(f"Rate limit exceeded. Retrying in {retry_delay} seconds... (Retry {retries}/{max_retries})")
-                time.sleep(retry_delay)
-            else:
-                print(f"An unexpected error occurred: {e}")
-                return None
+    
+
     print("Exceeded maximum retries.")
     return None
 
@@ -43,7 +84,7 @@ def filter_phrases(phrases, transcript):
     return list({phrase for phrase in phrases if (2 <= len(phrase.split()) <= 3) and (phrase in transcript)})
 
 
-def main(data):
+def main(data, file_name):
     # Example list of transcript lines (combined into a single transcript)
     transcript = data
 
@@ -93,18 +134,19 @@ def main(data):
 
     if completion is None:
         return [], []
-
+    
     try:
         # Get the response
         output = completion.choices[0].message.content
 
+
         # Save the output to a file for later use
-        with open("analysis_output.txt", "a", encoding="utf-8") as file:
+        analysis_output_path_tmp = f"current_file/analysis_output_{file_name}_tmp.txt"
+        with open(analysis_output_path_tmp, "a", encoding="utf-8") as file:
             file.write(output + "\n")
-        print("\nOutput saved to 'analysis_output.txt'")
+
     except Exception as e:
         print(f"An error occurred while processing the response: {e}")
-        print(completion)
         return [], []
 
     try:
@@ -115,14 +157,12 @@ def main(data):
         negative_phrases = filter_phrases(data_json.get("negative_phrases", []), transcript)
 
         # Save the positive phrases to a file
-        with open("positive_phrases.txt", "a", encoding="utf-8") as pos_file:
+        with open(f"current_file/positive_phrases_{file_name}_tmp.txt", "a", encoding="utf-8") as pos_file:
             pos_file.write("\n".join(positive_phrases) + "\n")
-        print("Positive phrases saved to 'positive_phrases.txt'")
 
         # Save the negative phrases to a file
-        with open("negative_phrases.txt", "a", encoding="utf-8") as neg_file:
+        with open(f"current_file/negative_phrases_{file_name}_tmp.txt", "a", encoding="utf-8") as neg_file:
             neg_file.write("\n".join(negative_phrases) + "\n")
-        print("Negative phrases saved to 'negative_phrases.txt'\n")
 
         return positive_phrases, negative_phrases
 
@@ -134,20 +174,18 @@ def main(data):
 if __name__ == "__main__":
     
 
-    files = glob.glob('/home/amankumar/prac/imp/sentiment/CallEarningTranscripts/CallEarningTranscripts/working_files/*_output.json')
+    files = glob.glob('CallEarningTranscripts/CallEarningTranscripts/working_files/*_output.json')
 
-
-    
-
-    for file_path in tqdm(files[:1], leave=False):
+    for file_path in tqdm(files[:10], leave=False):
         print(file_path)
-        file_name = file_path.split('/')[-1]
+        file_name = re.split(r'[\\/]', file_path)[-1]
+        file_name_abs = file_name.split('.')[0]
 
-
-        path_to_save = f'/home/amankumar/prac/imp/sentiment/sentiment_files/all/sentiment_{file_name}'
+        path_to_save = f'sentiment_files/combined/sentiment_{file_name}'
 
         if os.path.exists(path_to_save):
             print("File exists.")
+            continue
         else:
 
             # Open and read the JSON file
@@ -162,11 +200,8 @@ if __name__ == "__main__":
             for idx , key in enumerate(data[k]):
                 dialogue += key['dialogue']
 
-    # -------------------------------------------------
-            # print(dialogue)
-
-                if dialogue and (idx%7==0 or idx==len(data[k])-1):
-                    positive_phrases, negative_phrases = main(dialogue)
+                if dialogue and (idx%5==0 or idx==len(data[k])-1):
+                    positive_phrases, negative_phrases = main(dialogue, file_name_abs)
 
                     ans = {
                         'positive_phrases': positive_phrases,
@@ -175,8 +210,7 @@ if __name__ == "__main__":
 
                     final_answer[dialogue] = ans
 
-                    with open('full_answer.json', "a") as json_file:
-                        json_file.write("\n")
+                    with open('current_file/full_answer.json', "a") as json_file:
                         json.dump({dialogue: ans}, json_file, indent=4)
                         json_file.write("\n")
                     
@@ -185,9 +219,11 @@ if __name__ == "__main__":
                     # print("Data is empty")
                     pass
 
-    # -------------------------------------------------
-                    
-
-        with open('full_answer_complete.json', "w") as json_file:
+        with open(path_to_save, "w") as json_file:
             json.dump(final_answer, json_file, indent=4)
+        
+        create_final_files(file_name_abs)
+        
+        with open('processed_files.txt', "a") as json_file:
+            json_file.write(file_name + "\n")
 

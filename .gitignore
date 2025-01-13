@@ -1,6 +1,7 @@
 *.zip
 *.pyc
 __pycache__/
-*.json
-*.txt
 CallEarningTranscripts/
+current_file/
+sentiment_files/
+*.ipynb
