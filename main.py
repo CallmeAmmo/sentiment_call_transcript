@@ -104,6 +104,7 @@ def call_openai_api(client, model, system_message, user_message, retry_delay=4, 
         except Exception as e:
             print(f"An error occurred while calling the OpenAI API: {e}")
             retries+=1
+            print(f"Retrying in {retry_delay} seconds... (Retry {retries}/{max_retries})")
             time.sleep(retry_delay)
         
 
