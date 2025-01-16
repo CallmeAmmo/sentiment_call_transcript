@@ -2,3 +2,8 @@ OPENROUTER_API_KEY = [
     "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",
     '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'
 ]
+
+GROQ_API_KEY = [
+    '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',
+    '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'
+]

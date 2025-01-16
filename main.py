@@ -1,14 +1,26 @@
 import re
 from openai import OpenAI
-from models import free_models
-from api_key import OPENROUTER_API_KEY
+from models import free_models_openrouter, free_models_groq
+from api_key import OPENROUTER_API_KEY, GROQ_API_KEY
 import json, os, glob, time
 from tqdm import tqdm
 import shutil
 
+MODEL_OPENROUTER = free_models_openrouter[0]
+MODEL_GROQ = free_models_groq[0]
+
+API_KEY_OPENROUTER = OPENROUTER_API_KEY[0]
+API_KEY_GROQ = GROQ_API_KEY [1]
+
+BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
+BASE_URL_GROQ = "https://api.groq.com/openai/v1"
+
+
 # Initialize model and API key
-MODEL = free_models[0]
-OPENROUTER_API_KEY = OPENROUTER_API_KEY[0]
+BASE_URL = BASE_URL_GROQ
+API_KEY = API_KEY_GROQ
+MODEL = MODEL_GROQ
+
 
 
 def create_final_files(file_name):
@@ -41,6 +53,8 @@ def create_final_files(file_name):
         os.remove(f"current_file/positive_phrases_{file_name}_tmp.txt")
         os.remove(f"current_file/negative_phrases_{file_name}_tmp.txt")
         os.remove(f"current_file/analysis_output_{file_name}_tmp.txt")
+        os.remove(f"current_file/full_answer.json")
+
         print("Temporary files deleted.")
 
     except Exception as e:
@@ -51,29 +65,47 @@ def call_openai_api(client, model, system_message, user_message, retry_delay=4, 
     retries = 0
     while retries < max_retries:
 
-        # Call the OpenAI API
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": user_message},
-            ],
-        )
+        # # Call the OpenAI API
+        # completion = client.chat.completions.create(
+        #     model=model,
+        #     messages=[
+        #         {"role": "system", "content": system_message},
+        #         {"role": "user", "content": user_message},
+        #     ],
+        # )
 
+        try:
+            # Call the OpenAI API
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_message},
+                ],
+            )
         
-        if completion.id == None :
-
-            try :
-                raw_metadata = json.loads(completion.error['metadata']['raw'])
-                if 'error' in raw_metadata and raw_metadata['error'].get('type') == 'rate_limit_exceeded':
-                    retries += 1
-                    print(f"Rate limit exceeded. Retrying in {retry_delay} seconds... (Retry {retries}/{max_retries})")
-                    time.sleep(retry_delay)
-            except:
+        
+            if completion.id == None :
+                
                 print(completion)
-        else:
-            return completion
-    
+                print()
+
+                try :
+                    raw_metadata = json.loads(completion.error['metadata']['raw'])
+                    if 'error' in raw_metadata and raw_metadata['error'].get('type') == 'rate_limit_exceeded':
+                        retries += 1
+                        print(f"Rate limit exceeded. Retrying in {retry_delay} seconds... (Retry {retries}/{max_retries})")
+                        time.sleep(retry_delay)
+                except:
+                    print(completion)
+            else:
+                return completion
+            
+        except Exception as e:
+            print(f"An error occurred while calling the OpenAI API: {e}")
+            retries+=1
+            time.sleep(retry_delay)
+        
 
     print("Exceeded maximum retries.")
     return None
@@ -124,8 +156,8 @@ def main(data, file_name):
 
     # Initialize the OpenAI client
     client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY,
+        base_url=BASE_URL,
+        api_key=API_KEY,
     )
 
     # Send the entire transcript in one API call
@@ -176,7 +208,7 @@ if __name__ == "__main__":
 
     files = glob.glob('CallEarningTranscripts/CallEarningTranscripts/working_files/*_output.json')
 
-    for file_path in tqdm(files[:10], leave=False):
+    for file_path in tqdm(files, leave=False):
         print(file_path)
         file_name = re.split(r'[\\/]', file_path)[-1]
         file_name_abs = file_name.split('.')[0]
