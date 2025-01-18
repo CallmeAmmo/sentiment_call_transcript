@@ -6,20 +6,28 @@ import json, os, glob, time
 from tqdm import tqdm
 import shutil
 
+# OPENROUTER
 MODEL_OPENROUTER = free_models_openrouter[0]
-MODEL_GROQ = free_models_groq[0]
-
 API_KEY_OPENROUTER = OPENROUTER_API_KEY[0]
-API_KEY_GROQ = GROQ_API_KEY [1]
-
 BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
+
+# GROQ
+MODEL_GROQ = free_models_groq[2]
+API_KEY_GROQ = GROQ_API_KEY [0]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
 
 # Initialize model and API key
+
+# GROQ
 BASE_URL = BASE_URL_GROQ
 API_KEY = API_KEY_GROQ
 MODEL = MODEL_GROQ
+
+# # OPENROUTER
+# BASE_URL = BASE_URL_OPENROUTER
+# API_KEY = API_KEY_OPENROUTER
+# MODEL = MODEL_OPENROUTER
 
 
 
@@ -183,6 +191,17 @@ def main(data, file_name):
         return [], []
 
     try:
+
+        # Remove code block markers like ```json or ```
+        if output.startswith("```json"):
+            output = output.lstrip("```json").rstrip("```").strip()
+        elif output.startswith("```"):
+            output = output.lstrip("```").rstrip("```").strip()
+
+        # Handle double curly braces {{...}} by replacing them with single braces
+        if output.startswith("{{") and output.endswith("}}"):
+            output = output.lstrip("{").rstrip("}").strip()
+
         data_json = json.loads(output)
 
         # Extract positive and negative phrases
