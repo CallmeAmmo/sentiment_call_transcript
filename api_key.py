@@ -1,9 +1,13 @@
 OPENROUTER_API_KEY = [
     "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",
-    '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'
+    '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',
+    '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'
 ]
 
 GROQ_API_KEY = [
     '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',
-    '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'
+    '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',
+    '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',
+    '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',
+    
 ]

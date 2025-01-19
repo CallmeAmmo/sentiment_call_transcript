@@ -5,6 +5,11 @@ from api_key import OPENROUTER_API_KEY, GROQ_API_KEY
 import json, os, glob, time
 from tqdm import tqdm
 import shutil
+from time import sleep
+from ollama import Client, APIError
+
+# local for ollama and remote for online
+CALL = 'local'
 
 # OPENROUTER
 MODEL_OPENROUTER = free_models_openrouter[0]
@@ -12,8 +17,8 @@ API_KEY_OPENROUTER = OPENROUTER_API_KEY[2]
 BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
 
 # GROQ
-MODEL_GROQ = free_models_groq[3]
-API_KEY_GROQ = GROQ_API_KEY [1]
+MODEL_GROQ = free_models_groq[2]
+API_KEY_GROQ = GROQ_API_KEY [0]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
 
@@ -68,19 +73,44 @@ def create_final_files(file_name):
     except Exception as e:
         print(f"An error occurred while creating final files or deleting temporary files: {e}")
 
+
+def call_ollama_api(system_message, user_message, retry_delay=4, max_retries=3):
+    client = Client(
+        host='http://localhost:11434',
+        headers={'x-some-header': 'some-value'}
+    )
+
+    retries = 0
+    while retries < max_retries:
+        try:
+            response = client.chat(
+                model='llama3.2',
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_message},
+                ]
+            )
+            return response  # Return the successful response
+        except APIError as e:  # Handle specific API errors
+            print(f"APIError occurred: {e}")
+        except Exception as e:  # Handle other unexpected errors
+            print(f"An unexpected error occurred: {e}")
+        
+        # Retry logic
+        retries += 1
+        if retries < max_retries:
+            print(f"Retrying in {retry_delay} seconds... (Attempt {retries}/{max_retries})")
+            sleep(retry_delay)
+        else:
+            print("Max retries reached. Unable to get a response.")
+            raise  # Re-raise the last exception after exceeding retries
+
+        
+
 def call_openai_api(client, model, system_message, user_message, retry_delay=4, max_retries=3):
     """Call the OpenAI API with retry logic for rate-limit errors."""
     retries = 0
     while retries < max_retries:
-
-        # # Call the OpenAI API
-        # completion = client.chat.completions.create(
-        #     model=model,
-        #     messages=[
-        #         {"role": "system", "content": system_message},
-        #         {"role": "user", "content": user_message},
-        #     ],
-        # )
 
         try:
             # Call the OpenAI API
@@ -138,8 +168,8 @@ def main(data, file_name):
         ### Instructions:
         1. Analyze the entire transcript provided below.
         2. For each line in the transcript:
-            - Identify positive sentiment phrases: Phrases that convey optimism, growth, profit, confidence, or success.
-            - Identify negative sentiment phrases: Phrases that express concerns, risks, loss, doubts, or underperformance.
+            - Identify positive sentiment phrases: Phrases that convey optimism, growth, confidence, or success.
+            - Identify negative sentiment phrases: Phrases that express concerns, risks, doubts, or underperformance.
         3. Ensure extracted phrases are strictly 2-3 word phrases and relevant to the financial context.
 
         ### Output Format:
@@ -163,22 +193,34 @@ def main(data, file_name):
         "{transcript}"
     '''
 
-    # Initialize the OpenAI client
-    client = OpenAI(
-        base_url=BASE_URL,
-        api_key=API_KEY,
-    )
 
     # Send the entire transcript in one API call
     user_message = system_message.format(transcript=transcript)
-    completion = call_openai_api(client, MODEL, system_message, user_message)
+
+    # # Initialize the OpenAI client
+    # client = OpenAI(
+    #     base_url=BASE_URL,
+    #     api_key=API_KEY,
+    # )
+    # completion = call_openai_api(client, MODEL, system_message, user_message)
+
+
+    # Initialize the Ollama client
+    completion = call_ollama_api(system_message, user_message)
 
     if completion is None:
         return [], []
     
+
+    
     try:
-        # Get the response
-        output = completion.choices[0].message.content
+        output = None
+        if CALL == 'local':
+            output = completion.message.content
+
+        else:
+            # Get the response
+            output = completion.choices[0].message.content
 
 
         # Save the output to a file for later use
@@ -252,7 +294,7 @@ if __name__ == "__main__":
             for idx , key in enumerate(data[k]):
                 dialogue += key['dialogue']
 
-                if dialogue and (idx%15==0 or idx==len(data[k])-1):
+                if dialogue and (idx%5==0 or idx==len(data[k])-1):
                     positive_phrases, negative_phrases = main(dialogue, file_name_abs)
 
                     ans = {

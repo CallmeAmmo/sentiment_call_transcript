@@ -9,5 +9,7 @@ free_models_openrouter = [
 free_models_groq = [
     "llama-3.3-70b-versatile",
     'llama-3.1-8b-instant',
-    'gemma2-9b-it'
+    'gemma2-9b-it',
+    'llama3-70b-8192',
+    'mixtral-8x7b-32768'
 ]
