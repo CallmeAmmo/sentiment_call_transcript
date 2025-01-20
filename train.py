@@ -11,7 +11,9 @@ negative_folder = "sentiment_files/negative/"
 
 
 def get_data():
-    df = pd.read_csv(r'CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
+    # df = pd.read_csv(r'CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
+    df = pd.read_csv(r'CallEarningTranscripts/CallEarningTranscripts/price_mapped_transcripts_multiple_returns_new.csv')
+
     data = df[['pdf_file','d1_n1_return']]
     data.dropna(inplace=True)
 

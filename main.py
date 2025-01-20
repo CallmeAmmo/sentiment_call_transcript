@@ -12,8 +12,8 @@ API_KEY_OPENROUTER = OPENROUTER_API_KEY[2]
 BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
 
 # GROQ
-MODEL_GROQ = free_models_groq[3]
-API_KEY_GROQ = GROQ_API_KEY [1]
+MODEL_GROQ = free_models_groq[2]
+API_KEY_GROQ = GROQ_API_KEY [0]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
 
@@ -234,8 +234,14 @@ if __name__ == "__main__":
         file_name_abs = file_name.split('.')[0]
 
         path_to_save = f'sentiment_files/combined/sentiment_{file_name}'
+        processed_file_path = 'processed_files.txt'
 
-        if os.path.exists(path_to_save):
+        # Read the file and check if the file_name exists
+        with open(processed_file_path, "r") as file:
+            processed_files_already = file.read().splitlines()
+
+
+        if os.path.exists(path_to_save) or (file_name in processed_files_already):
             print("File exists.")
             continue
         else:
