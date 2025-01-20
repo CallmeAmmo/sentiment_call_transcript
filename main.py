@@ -12,8 +12,8 @@ API_KEY_OPENROUTER = OPENROUTER_API_KEY[2]
 BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
 
 # GROQ
-MODEL_GROQ = free_models_groq[2]
-API_KEY_GROQ = GROQ_API_KEY [0]
+MODEL_GROQ = free_models_groq[3]
+API_KEY_GROQ = GROQ_API_KEY [3]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
 
