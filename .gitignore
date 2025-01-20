@@ -1,7 +1,9 @@
-*.zip
+# *.zip
 *.pyc
 __pycache__/
 CallEarningTranscripts/
 current_file/
 sentiment_files/
 *.ipynb
+CallEarningTranscripts.zip
+
