@@ -6,28 +6,28 @@ import json, os, glob, time
 from tqdm import tqdm
 import shutil
 
-# OPENROUTER
-MODEL_OPENROUTER = free_models_openrouter[1]
-API_KEY_OPENROUTER = OPENROUTER_API_KEY[2]
-BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
+# # OPENROUTER
+# MODEL_OPENROUTER = free_models_openrouter[1]
+# API_KEY_OPENROUTER = OPENROUTER_API_KEY[2]
+# BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
 
 # GROQ
-# MODEL_GROQ = free_models_groq[1]
-# API_KEY_GROQ = GROQ_API_KEY [3]
-# BASE_URL_GROQ = "https://api.groq.com/openai/v1"
+MODEL_GROQ = free_models_groq[3]
+API_KEY_GROQ = GROQ_API_KEY [0]
+BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
 
 # Initialize model and API key
 
-# # GROQ
-# BASE_URL = BASE_URL_GROQ
-# API_KEY = API_KEY_GROQ
-# MODEL = MODEL_GROQ
+# GROQ
+BASE_URL = BASE_URL_GROQ
+API_KEY = API_KEY_GROQ
+MODEL = MODEL_GROQ
 
-# OPENROUTER
-BASE_URL = BASE_URL_OPENROUTER
-API_KEY = API_KEY_OPENROUTER
-MODEL = MODEL_OPENROUTER
+# # OPENROUTER
+# BASE_URL = BASE_URL_OPENROUTER
+# API_KEY = API_KEY_OPENROUTER
+# MODEL = MODEL_OPENROUTER
 
 
 
@@ -258,7 +258,7 @@ if __name__ == "__main__":
             for idx , key in enumerate(data[k]):
                 dialogue += key['dialogue']
 
-                if dialogue and (idx%15==0 or idx==len(data[k])-1):
+                if dialogue and (idx%5==0 or idx==len(data[k])-1):
                     positive_phrases, negative_phrases = main(dialogue, file_name_abs)
 
                     ans = {
