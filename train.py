@@ -67,7 +67,7 @@ def train_model(df):
         all_phrases = list(positive_phrases.union(negative_phrases))  # Ensure unique terms only
 
         # Create CountVectorizer using Unigrams, Bigrams, and Trigrams
-        vectorizer = CountVectorizer(vocabulary=all_phrases, ngram_range=(1, 3))
+        vectorizer = CountVectorizer(vocabulary=all_phrases, ngram_range=(1,3))
 
         # Generate Features for Train and Test Data
         X_train = vectorizer.transform(train_df['extracted_phrases'])
