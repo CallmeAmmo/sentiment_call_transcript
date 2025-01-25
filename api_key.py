@@ -6,6 +6,7 @@ OPENROUTER_API_KEY = [
 
 GROQ_API_KEY = [
     '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',
+    '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',
     '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',
     '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',
     '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',
