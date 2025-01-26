@@ -13,7 +13,7 @@ import shutil
 
 # GROQ
 MODEL_GROQ = free_models_groq[3]
-API_KEY_GROQ = GROQ_API_KEY [1]
+API_KEY_GROQ = GROQ_API_KEY [0]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
 
