@@ -5,6 +5,7 @@ from api_key import OPENROUTER_API_KEY, GROQ_API_KEY
 import json, os, glob, time
 from tqdm import tqdm
 import shutil
+import pandas as pd
 
 # # OPENROUTER
 # MODEL_OPENROUTER = free_models_openrouter[1]
@@ -12,8 +13,8 @@ import shutil
 # BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
 
 # GROQ
-MODEL_GROQ = free_models_groq[1]
-API_KEY_GROQ = GROQ_API_KEY [1]
+MODEL_GROQ = free_models_groq[3]
+API_KEY_GROQ = GROQ_API_KEY [0]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
 
@@ -67,6 +68,16 @@ def create_final_files(file_name):
 
     except Exception as e:
         print(f"An error occurred while creating final files or deleting temporary files: {e}")
+
+def get_req_files():
+    df = pd.read_csv(r'E:\work\Upwork\sentiment_call_transcript\CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
+    data = df[['pdf_file','d1_n1_return']]
+    data.dropna(inplace=True)
+
+    data['req_file'] = data['pdf_file'].apply(lambda x: x.split('_')[1].split('.')[0] + '_output.json')
+
+    return data.req_file.to_list()
+
 
 def call_openai_api(client, model, system_message, user_message, retry_delay=4, max_retries=3):
     """Call the OpenAI API with retry logic for rate-limit errors."""
@@ -227,12 +238,12 @@ if __name__ == "__main__":
     
 
     files = glob.glob('CallEarningTranscripts/CallEarningTranscripts/working_files/*_output.json')
+    req_files = get_req_files()
 
     for file_path in tqdm(files, leave=False):
         print(file_path)
         file_name = re.split(r'[\\/]', file_path)[-1]
         file_name_abs = file_name.split('.')[0]
-
         path_to_save = f'sentiment_files/combined/sentiment_{file_name}'
         processed_file_path = 'processed_files.txt'
 
@@ -240,9 +251,11 @@ if __name__ == "__main__":
         with open(processed_file_path, "r") as file:
             processed_files_already = file.read().splitlines()
 
-
         if os.path.exists(path_to_save) or (file_name in processed_files_already):
             print("File exists.")
+            continue
+        elif not file_name in req_files:
+            print("File not required.")
             continue
         else:
 
@@ -258,7 +271,7 @@ if __name__ == "__main__":
             for idx , key in enumerate(data[k]):
                 dialogue += key['dialogue']
 
-                if dialogue and (idx%10==0 or idx==len(data[k])-1):
+                if dialogue and (idx%15==0 or idx==len(data[k])-1):
                     positive_phrases, negative_phrases = main(dialogue, file_name_abs)
 
                     ans = {
