@@ -13,7 +13,7 @@ import pandas as pd
 # BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
 
 # GROQ
-MODEL_GROQ = free_models_groq[4]
+MODEL_GROQ = free_models_groq[3]
 API_KEY_GROQ = GROQ_API_KEY [1]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
@@ -271,7 +271,7 @@ if __name__ == "__main__":
             for idx , key in enumerate(data[k]):
                 dialogue += key['dialogue']
 
-                if dialogue and (idx%15==0 or idx==len(data[k])-1):
+                if dialogue and (idx%10==0 or idx==len(data[k])-1):
                     positive_phrases, negative_phrases = main(dialogue, file_name_abs)
 
                     ans = {
