@@ -47,6 +47,9 @@ def train_model(df):
     # Perform 5-fold cross-validation
     for fold, (train_idx, test_idx) in enumerate(kf.split(df)):
         print(f"Fold {fold + 1}")
+        print(f'train idx {len(train_idx)}')
+        print(f'test idx {len(test_idx)}')
+
         
         # Split the data into train and test sets for this fold
         train_df = df.iloc[train_idx]
@@ -110,6 +113,5 @@ if __name__ == "__main__":
     df["extracted_phrases"] = df.apply(
         lambda row: read_phrases_from_folder(row["pdf_file"], row["sentiment_class"]), axis=1
     )
-
     train_model(df)
 
