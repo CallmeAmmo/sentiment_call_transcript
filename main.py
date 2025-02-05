@@ -13,7 +13,7 @@ import pandas as pd
 # BASE_URL_OPENROUTER = "https://openrouter.ai/api/v1"
 
 # GROQ
-MODEL_GROQ = free_models_groq[3]
+MODEL_GROQ = free_models_groq[1]
 API_KEY_GROQ = GROQ_API_KEY [0]
 BASE_URL_GROQ = "https://api.groq.com/openai/v1"
 
@@ -70,7 +70,8 @@ def create_final_files(file_name):
         print(f"An error occurred while creating final files or deleting temporary files: {e}")
 
 def get_req_files():
-    df = pd.read_csv(r'E:\work\Upwork\sentiment_call_transcript\CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
+    # df = pd.read_csv(r'E:\work\Upwork\sentiment_call_transcript\CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
+    df = pd.read_csv('CallEarningTranscripts/CallEarningTranscripts/price_mapped_transcripts_multiple_returns_new.csv')
     data = df[['pdf_file','d1_n1_return']]
     data.dropna(inplace=True)
 
