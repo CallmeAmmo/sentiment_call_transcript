@@ -5,6 +5,14 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.model_selection import KFold
 
+import re
+import json, os, glob, time
+from tqdm import tqdm
+
+import nltk
+from nltk.tokenize import word_tokenize
+nltk.download('punkt')
+
 # Define the folders for positive and negative phrases
 positive_folder = "sentiment_files/positive/"
 negative_folder = "sentiment_files/negative/"
@@ -36,6 +44,31 @@ def read_phrases_from_folder(pdf_file, sentiment_class):
             return file.read().replace("\n", " ").strip()  # Read and strip whitespace
     except FileNotFoundError:
         return ""  # Return an empty string if the file is not found
+    
+
+
+def all_phrases_from_folder(req_files):
+    files = glob.glob('CallEarningTranscripts/CallEarningTranscripts/working_files/*_output.json')
+    all_tokens = set()  # Use a set to store unique tokens
+    print('Getting all phrases...')
+
+    for file_path in tqdm(files, leave=False):
+        file_name = re.split(r'[\\/]', file_path)[-1]
+
+        if file_name not in req_files:
+            # print("File not required.")
+            continue
+
+        # Open and read the JSON file
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+
+        # Extract dialogue and tokenize
+        dialogue = " ".join(key['dialogue'] for key in data['speaker_texts'])
+        all_tokens.update(dialogue.split())  # Add unique tokens to set
+    print('Done.')
+
+    return list(all_tokens)  # Convert to list only at the end
 
 
 def train_model(df):
@@ -49,11 +82,12 @@ def train_model(df):
         print(f"Fold {fold + 1}")
         print(f'train idx {len(train_idx)}')
         print(f'test idx {len(test_idx)}')
-
         
         # Split the data into train and test sets for this fold
         train_df = df.iloc[train_idx]
         test_df = df.iloc[test_idx]
+
+        all_phrases_files = train_df.pdf_file.apply(lambda x: x.split('_')[1].split('.')[0] + '_output.json').to_list()
 
         # Extract Positive and Negative Phrases for Vocabulary (from TRAINING data only)
         positive_phrases = set()
@@ -67,7 +101,8 @@ def train_model(df):
                 negative_phrases.update(phrases)
 
         # Combine Positive and Negative Phrases into Vocabulary
-        all_phrases = list(positive_phrases.union(negative_phrases))  # Ensure unique terms only
+        # all_phrases = list(positive_phrases.union(negative_phrases))  # Ensure unique terms only
+        all_phrases = all_phrases_from_folder(all_phrases_files)
 
         # Create CountVectorizer using Unigrams, Bigrams, and Trigrams
         vectorizer = CountVectorizer(vocabulary=all_phrases, ngram_range=(1,3))

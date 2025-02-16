@@ -70,7 +70,7 @@ def create_final_files(file_name):
         print(f"An error occurred while creating final files or deleting temporary files: {e}")
 
 def get_req_files():
-    # df = pd.read_csv(r'E:\work\Upwork\sentiment_call_transcript\CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
+    # df = pd.read_csv(r'CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
     df = pd.read_csv('CallEarningTranscripts/CallEarningTranscripts/price_mapped_transcripts_multiple_returns_new.csv')
     data = df[['pdf_file','d1_n1_return']]
     data.dropna(inplace=True)
