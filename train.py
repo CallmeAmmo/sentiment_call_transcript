@@ -19,7 +19,6 @@ negative_folder = "sentiment_files/negative/"
 
 
 def get_data():
-    # df = pd.read_csv(r'CallEarningTranscripts\CallEarningTranscripts\price_mapped_transcripts_multiple_returns_new.csv')
     df = pd.read_csv(r'CallEarningTranscripts/CallEarningTranscripts/price_mapped_transcripts_multiple_returns_new.csv')
 
     data = df[['pdf_file','d1_n1_return']]
@@ -36,39 +35,52 @@ def read_phrases_from_folder(pdf_file, sentiment_class):
 
     file_name = pdf_file.split('_')[1].split('.')[0]
 
-    folder = positive_folder if sentiment_class == "positive" else negative_folder
-    file_path = os.path.join(folder, f"{sentiment_class}_phrases_{file_name}_output.txt")
+    # folder = positive_folder if sentiment_class == "positive" else negative_folder
+    # file_path = os.path.join(folder, f"{sentiment_class}_phrases_{file_name}_output.txt")
+    
+
+    file_path_positive = os.path.join(positive_folder, f"{sentiment_class}_phrases_{file_name}_output.txt")
+    file_path_negative = os.path.join(negative_folder, f"{sentiment_class}_phrases_{file_name}_output.txt")
+
+
+    full_extracted_text =  ""
+    try:
+        # with open(file_path, 'r', encoding='utf-8') as file:
+        #     return file.read().replace("\n", " ").strip()  # Read and strip whitespace
+
+        with open(file_path_positive, 'r', encoding='utf-8') as file:
+            positive_text = file.read().replace("\n", " ").strip()  # Read and strip whitespace
+
+    except FileNotFoundError:
+        positive_text = ""  # Return an empty string if the file is not found
+
+    try:
+        with open(file_path_negative, 'r', encoding='utf-8') as file:
+            negative_text = file.read().replace("\n", " ").strip()  # Read and strip whitespace
+    except FileNotFoundError:
+        negative_text =  ""
+    
+    return positive_text + " " + negative_text
+
+    
+def read_raw_text(pdf_file):
+
+    file_name = pdf_file.split('_')[1].split('.')[0]
+
+    folder = "CallEarningTranscripts/CallEarningTranscripts/working_files/"
+    file_path = os.path.join(folder, f"{file_name}_output.json")
+    print(file_path)
     
     try:
-       with open(file_path, 'r', encoding='utf-8') as file:
-            return file.read().replace("\n", " ").strip()  # Read and strip whitespace
-    except FileNotFoundError:
-        return ""  # Return an empty string if the file is not found
-    
-
-
-def all_phrases_from_folder(req_files):
-    files = glob.glob('CallEarningTranscripts/CallEarningTranscripts/working_files/*_output.json')
-    all_tokens = set()  # Use a set to store unique tokens
-    print('Getting all phrases...')
-
-    for file_path in tqdm(files, leave=False):
-        file_name = re.split(r'[\\/]', file_path)[-1]
-
-        if file_name not in req_files:
-            # print("File not required.")
-            continue
-
-        # Open and read the JSON file
         with open(file_path, 'r') as file:
-            data = json.load(file)
+                data = json.load(file)
 
         # Extract dialogue and tokenize
         dialogue = " ".join(key['dialogue'] for key in data['speaker_texts'])
-        all_tokens.update(dialogue.split())  # Add unique tokens to set
-    print('Done.')
 
-    return list(all_tokens)  # Convert to list only at the end
+        return dialogue
+    except FileNotFoundError:
+        return ""  # Return an empty string if the file is not found
 
 
 def train_model(df):
@@ -87,8 +99,6 @@ def train_model(df):
         train_df = df.iloc[train_idx]
         test_df = df.iloc[test_idx]
 
-        all_phrases_files = train_df.pdf_file.apply(lambda x: x.split('_')[1].split('.')[0] + '_output.json').to_list()
-
         # Extract Positive and Negative Phrases for Vocabulary (from TRAINING data only)
         positive_phrases = set()
         negative_phrases = set()
@@ -101,21 +111,20 @@ def train_model(df):
                 negative_phrases.update(phrases)
 
         # Combine Positive and Negative Phrases into Vocabulary
-        # all_phrases = list(positive_phrases.union(negative_phrases))  # Ensure unique terms only
-        all_phrases = all_phrases_from_folder(all_phrases_files)
+        all_phrases = list(positive_phrases.union(negative_phrases))  # Ensure unique terms only
 
         # Create CountVectorizer using Unigrams, Bigrams, and Trigrams
         vectorizer = CountVectorizer(vocabulary=all_phrases, ngram_range=(1,3))
 
         # Generate Features for Train and Test Data
-        X_train = vectorizer.transform(train_df['extracted_phrases'])
+        X_train = vectorizer.transform(train_df['raw_text'])
         y_train = train_df['sentiment_class']
 
-        X_test = vectorizer.transform(test_df['extracted_phrases'])
+        X_test = vectorizer.transform(test_df['raw_text'])
         y_test = test_df['sentiment_class']
 
         # Train a Logistic Regression Classifier
-        model = LogisticRegression()
+        model = LogisticRegression(solver='liblinear')
         model.fit(X_train, y_train)
 
         # Predict and Evaluate the Model
@@ -148,5 +157,11 @@ if __name__ == "__main__":
     df["extracted_phrases"] = df.apply(
         lambda row: read_phrases_from_folder(row["pdf_file"], row["sentiment_class"]), axis=1
     )
+
+    df["raw_text"] = df.apply(
+        lambda row: read_raw_text(row["pdf_file"]), axis=1
+    )
+
+    print(df.head())
     train_model(df)
 
